@@ -3,17 +3,9 @@ namespace spamfilter;
 
 use
 \lib\Request,
-\spamfilter\entity\Word,
-\spamfilter\CommentInterface,
 \spamfilter\KnowledgeInterface;
 
 class SpamFilter {
-
-	/** @var \lib\container\Container */
-	protected $Container;
-
-	/** @var CommentInterface */
-	protected $Comment;
 
 	/** @var KnowledgeInterface */
 	protected $Knowledge;
@@ -21,7 +13,7 @@ class SpamFilter {
 	/** @var int */
 	protected $tolerance;
 
-	/** @var \spamfilter\entity\Word[] */
+	/** @var array */
 	protected $knowledge = array();
 
 	/** @var array */
@@ -30,13 +22,11 @@ class SpamFilter {
 	/**
 	 * Creates SpamFilter instance
 	 *
-	 * @param KnowledgeInterface    $Knowledge
-	 * @param CommentInterface|null $Comment
-	 * @param int                             $tolerance
+	 * @param KnowledgeInterface $Knowledge
+	 * @param int                $tolerance
 	 */
-	public function __construct(KnowledgeInterface $Knowledge, CommentInterface $Comment = null, $tolerance = 4) {
+	public function __construct(KnowledgeInterface $Knowledge, $tolerance = 4) {
 		$this->Knowledge = $Knowledge;
-		$this->Comment = &$Comment;
 		$this->tolerance = (int) $tolerance;
 	}
 
@@ -51,18 +41,18 @@ class SpamFilter {
 	public function learn($text, $spam = false) {
 		$text = $this->splitText($text);
 
-		foreach($text as $hash => $word) {
+		foreach($text as &$word) {
 			try {
-				$Word = $this->Knowledge->getWord($word);
+				$word = $this->Knowledge->getWord($word);
 			}
 			catch(\OutOfRangeException $e) {
-				$Word = new Word(array('hash' => $hash, 'word' => $word, 'ham' => 0, 'spam' => 0));
+				$word = array('word' => $word, 'ham' => 0, 'spam' => 0);
 			}
 
-			$Word['ham'] = $Word['ham'] + (!$spam ? 1 : 0);
-			$Word['spam'] = $Word['spam'] + ($spam ? 1 : 0);
+			$word['ham'] = $word['ham'] + (!$spam ? 1 : 0);
+			$word['spam'] = $word['spam'] + ($spam ? 1 : 0);
 
-			$this->Knowledge->putWord($Word);
+			$this->Knowledge->putWord($word);
 		}
 
 		return $text;
@@ -75,22 +65,22 @@ class SpamFilter {
 	 * 0  - possible spam
 	 * -1 - is spam
 	 *
-	 * @param array|\ArrayAccess $Comment
+	 * @param array|\ArrayAccess $text
 	 * @param \lib\Request|null  $Request
 	 * @param bool               $verbose
 	 *
 	 * @return array|int
 	 */
-	public function rate($Comment, Request $Request = null, $verbose = true) {
+	public function rate($text, Request $Request = null, $verbose = true) {
 		$pts = array();
 
-		$pts['links'] = $this->links($Comment['text']);
-		$pts['body'] = $this->body($Comment['text']);
-		$pts['prop'] = $this->prop($Comment['text']);
+		$pts['links'] = $this->links($text['text']);
+		$pts['body'] = $this->body($text['text']);
+		$pts['prop'] = $this->prop($text['text']);
 
 		if($Request) {
-			$pts['history'] = $this->history($this->Comment->history($Comment));
-			$pts['exists'] = $this->existing($this->Comment->exists($Comment));
+			$pts['history'] = $this->history($this->Knowledge->history($text));
+			$pts['exists'] = $this->existing($this->Knowledge->exists($text));
 			$pts['honeypot'] = $this->honeypot(isset($Request->post['entity']['body']) && empty($Request->post['entity']['body']));
 			$pts['referer'] = $this->referer($Request->referer);
 			$pts['elapsed'] = $this->elapsed(isset($Request->post['entity']['stamp']) ? time() - $Request->post['entity']['stamp'] : 0);
@@ -171,16 +161,16 @@ class SpamFilter {
 		$text = $this->splitText($text);
 
 		$condition = array();
-		foreach($text as $hash => $word) {
-			if(!isset($this->knowledge[$hash])) {
-				$condition[] = $hash;
+		foreach($text as $word) {
+			if(!isset($this->knowledge[$word])) {
+				$condition[] = $word;
 			}
 		}
 
 		if(!empty($condition)) {
 			$condition = array_unique($condition);
 
-			$knowledge = $this->Knowledge->getByHash($condition);
+			$knowledge = $this->Knowledge->getWords($condition);
 			foreach($knowledge as $word) {
 				$this->knowledge[$word['word']] = $word;
 			}
@@ -225,7 +215,7 @@ class SpamFilter {
 				continue;
 			}
 
-			$output[crc32($word)] = $word;
+			$output[] = $word;
 		}
 
 		return $output;
