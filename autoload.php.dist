@@ -1,5 +1,3 @@
 <?php
-require_once __DIR__ . '/lib/Request.php';
-
 require_once __DIR__ . '/spamfilter/KnowledgeInterface.php';
 require_once __DIR__ . '/spamfilter/SpamFilter.php';

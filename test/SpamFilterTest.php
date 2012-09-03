@@ -88,7 +88,7 @@ class SpamFilterTest extends \PHPUnit_Framework_TestCase {
 			'user' => 'user@test.com'
 		);
 
-		$result = $this->object->rate($iArr, null, true);
+		$result = $this->object->rate($iArr, null, null, null, true);
 
 		$this->assertArrayHasKey('links', $result);
 		$this->assertArrayHasKey('body', $result);
@@ -104,7 +104,7 @@ class SpamFilterTest extends \PHPUnit_Framework_TestCase {
 
 		$result = $this->object->rate($iArr, null, false);
 
-		$this->assertEquals(0, $result);
+		$this->assertEquals(-1, $result);
 	}
 
 	/**
@@ -129,9 +129,7 @@ class SpamFilterTest extends \PHPUnit_Framework_TestCase {
 			'user' => 'user@test.com'
 		);
 
-		$Request = new \lib\Request();
-
-		$result = $this->object->rate($iArr, $Request, true);
+		$result = $this->object->rate($iArr, 'foo', '', null, true);
 
 		$this->assertArrayHasKey('links', $result);
 		$this->assertArrayHasKey('body', $result);
@@ -146,10 +144,10 @@ class SpamFilterTest extends \PHPUnit_Framework_TestCase {
 		$this->assertEquals(0, $result['exists']);
 		$this->assertEquals(-100, $result['honeypot']);
 		$this->assertEquals(-100, $result['referer']);
-		$this->assertEquals(-303.1578947368421, $result['total']);
+		$this->assertEquals(-203.1578947368421, $result['total']);
 		$this->assertEquals(-1, $result['rate']);
 
-		$result = $this->object->rate($iArr, $Request, false);
+		$result = $this->object->rate($iArr, 'foo', '', null, false);
 
 		$this->assertEquals(-1, $result);
 	}

@@ -5,8 +5,6 @@ Evaluates text and depending od received grade - marks it as spam or ham.
 
 For licence details see Licence.md
 
-For ``Request`` description see REQUEST.md
-
 ## Usage
 
 ``SpamFilter`` consists of two classes: ``SpamFilter`` where all rating logic is located, and custom class implementing ``KnowledgeInterface`` that provides access to storage eg. database.
@@ -24,7 +22,7 @@ Learns filtering from string
 * ``$spam`` flag defining if string is ham or spam
 
 
-#### SpamFilter::rate($Text, Request $Request = null, $verbose = true)
+#### SpamFilter::rate($Text, $honeypot = null, $referer = null, $elapsed = null $verbose = true)
 
 Rates comment according to passed weights
 If verbose is true - returns array containing all evaluation results.
@@ -34,7 +32,9 @@ Othervise returns status (integer)
 -1 - is spam
 
 * ``$Text`` array containing two fields, one with ``text`` key containing text to rate, and second with key defined in ``KnowledgeInterface`` containing user identifier (eg login, e-mail)
-* ``$Request`` ``Request`` instance used in some ratings
+* ``$honeypot`` honeypot field content, if null passed - honeypot is omitted
+* ``$referer`` expected referer, if null passed - check is omitted
+* ``$elapsed`` timestamp when form was generated - if null, rating will be omitted
 * ``$verbose`` flag trigging verbose (array) result
 
 
@@ -147,17 +147,17 @@ Returns data from knowledge repository matching passed words
 * ``$words`` array containing words to retrieve from knowledge
 
 
-#### KnowledgeInterface::history($Comment);
+#### KnowledgeInterface::history($text);
 
 Checks authors history (based on authors email)
 Returns number of ham comments minus number spam comments
 
-* ``$Text`` - array containing two fields: ``text`` with evaluated text and second containig user identifier (eg. login, e-mail)
+* ``$text`` - array containing two fields: ``text`` with evaluated text and second containig user identifier (eg. login, e-mail)
 
 
-#### KnowledgeInterface::exists($Comment);
+#### KnowledgeInterface::exists($text);
 
 Checks if comment with same text exists
 Returns true if exists
 
-* ``$Text`` - array containing two fields: ``text`` with evaluated text and second containig user identifier (eg. login, e-mail)
+* ``$text`` - array containing two fields: ``text`` with evaluated text and second containig user identifier (eg. login, e-mail)

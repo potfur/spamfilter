@@ -66,25 +66,32 @@ class SpamFilter {
 	 * -1 - is spam
 	 *
 	 * @param array|\ArrayAccess $text
-	 * @param \lib\Request|null  $Request
+	 * @param string             $honeypot
+	 * @param string             $referer
+	 * @param string             $elapsed
 	 * @param bool               $verbose
 	 *
 	 * @return array|int
 	 */
-	public function rate($text, Request $Request = null, $verbose = true) {
+	public function rate($text, $honeypot = null, $referer = null, $elapsed = null, $verbose = false) {
 		$pts = array();
 
 		$pts['links'] = $this->links($text['text']);
 		$pts['body'] = $this->body($text['text']);
 		$pts['prop'] = $this->prop($text['text']);
 
-		if($Request) {
+		if($elapsed === null) {
+			$pts['history'] = 0;
+			$pts['exists'] = 0;
+		}
+		else {
 			$pts['history'] = $this->history($this->Knowledge->history($text));
 			$pts['exists'] = $this->existing($this->Knowledge->exists($text));
-			$pts['honeypot'] = $this->honeypot(isset($Request->post['entity']['body']) && empty($Request->post['entity']['body']));
-			$pts['referer'] = $this->referer($Request->referer);
-			$pts['elapsed'] = $this->elapsed(isset($Request->post['entity']['stamp']) ? time() - $Request->post['entity']['stamp'] : 0);
 		}
+
+		$pts['honeypot'] = $honeypot === null ? 0 : $this->honeypot(empty($honeypot));
+		$pts['referer'] = $referer === null ? 0 : $this->referer($referer);
+		$pts['elapsed'] = $elapsed === null ? 0 : $this->elapsed(time() - $elapsed);
 
 		$pts['total'] = array_sum($pts);
 
