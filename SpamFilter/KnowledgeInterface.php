@@ -1,5 +1,5 @@
 <?php
-namespace spamfilter;
+namespace SpamFilter;
 
 interface KnowledgeInterface {
 

@@ -1,22 +1,26 @@
 <?php
-namespace spamfilter;
-
-use
-\lib\Request,
-\spamfilter\KnowledgeInterface;
+namespace SpamFilter;
 
 class SpamFilter {
 
-	/** @var KnowledgeInterface */
+    /**
+     * @var KnowledgeInterface
+     */
 	protected $Knowledge;
 
-	/** @var int */
+    /**
+     * @var int
+     */
 	protected $tolerance;
 
-	/** @var array */
+    /**
+     * @var array
+     */
 	protected $knowledge = array();
 
-	/** @var array */
+    /**
+     * @var array
+     */
 	protected $strip = array('\n', '\r', '\t', "\n", "\r", "\t", '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '-', '=', '{', '}', '[', ']', ':', '"', ';', '\'', '<', '>', '?', ',', '.', '/', '|', '\\');
 
 	/**
