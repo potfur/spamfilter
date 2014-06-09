@@ -10,7 +10,7 @@ For licence details see LICENCE
 `SpamFilter` consists of one class that contains all rating logic.
 Also there are two interfaces, that need to be implemented on your own used by `SpamFilter` in rating.
 
-  * `DictionaryInterface` - that provides access to place where information about word probabilities are stored;
+  * `DictionaryInterface` - that provides access to place where information about word probabilities are stored [sample implementation](https://gist.github.com/potfur/20cc7e1eadb5714f5d58);
   * `HistoryInterface` - interface implemented for author history and checking if same entry exists
 
 As text evaluation is mostly based on gathered knowledge, filter should learn from existing texts (eg. from comments) using `SpamFilter::learn()` method.
