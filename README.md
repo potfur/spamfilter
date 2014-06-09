@@ -1,163 +1,170 @@
 # SpamFilter
 
-Indepentent spam filtering module.
-Evaluates text and depending od received grade - marks it as spam or ham.
+Independent _spam_ filtering module.
+Evaluates text length, its content - how many links there are, used words, authors history and grades it.
 
-For licence details see Licence.md
+For licence details see LICENCE
 
 ## Usage
 
-``SpamFilter`` consists of two classes: ``SpamFilter`` where all rating logic is located, and custom class implementing ``KnowledgeInterface`` that provides access to storage eg. database.
-As text evaluation is mostly based on gathered knowledge, filter should learn from existing texts (eg. from comments) using ``SpamFilter::learn()`` method.
+`SpamFilter` consists of one class that contains all rating logic.
+Also there are two interfaces, that need to be implemented on your own used by `SpamFilter` in rating.
 
+  * `DictionaryInterface` - that provides access to place where information about word probabilities are stored;
+  * `HistoryInterface` - interface implemented for author history and checking if same entry exists
+
+As text evaluation is mostly based on gathered knowledge, filter should learn from existing texts (eg. from comments) using `SpamFilter::learn()` method.
 Beside knowledge evaluation, filter allows to evaluate other text properties such as: text length, number of existing links, authors history etc.
+
+```php
+$dictionary = new Dictionary(); // DictionaryInterface implementation
+$history = new History(); // HistoryInterface implementation
+
+$filter = new SpamFilter($dictionary, $history);
+
+$grade = $filter->rate(
+	'Some text with <a href="http://spam.com">link</a>', // graded text
+	1123, // user identifier
+	'', // honeypot content
+	'http://google.com', // received referrer
+	'http://google.com', // expected referrer
+	$submitted // form render time
+);
+```
 
 ### Methods
 
 #### SpamFilter::learn($text, $spam = false)
 
-Learns filtering from string
+Learns filtering from string.
+Splits string into tokens and adds them to Dictionary
 
-* ``$text`` text to learn from
-* ``$spam`` flag defining if string is ham or spam
+* `$text` text to learn from
+* `$isSpam` flag defining if string is _ham_ or _spam_
 
+#### SpamFilter::rate($text, $author = null, $honeypot = null, $referrer = null, $expectedReferrer = null, \DateTime $submitted = null, $verbose = false)
 
-#### SpamFilter::rate($Text, $honeypot = null, $referer = null, $elapsed = null $verbose = true)
+Grades `$text` using all available methods.
 
-Rates comment according to passed weights
-If verbose is true - returns array containing all evaluation results.
-Othervise returns status (integer)
-+1 - is ham
- 0  - possible spam
--1 - is spam
-
-* ``$Text`` array containing two fields, one with ``text`` key containing text to rate, and second with key defined in ``KnowledgeInterface`` containing user identifier (eg login, e-mail)
-* ``$honeypot`` honeypot field content, if null passed - honeypot is omitted
-* ``$referer`` expected referer, if null passed - check is omitted
-* ``$elapsed`` timestamp when form was generated - if null, rating will be omitted
-* ``$verbose`` flag trigging verbose (array) result
-
+  * `$text` - text to be graded, few links in long texts preferably
+  * `$author` - authors identifier that will be used to check its history,
+  * `$honeypot` - value from honeypot field,
+  * `$referrer` - referrer from request,
+  * `$expectedReferrer` - expected referrer,
+  * `$submitted` - `\DateTime` instance when entry was submitted, laziness is good,
+  * `$verbose` - if true will return array with grades per method, otherwise will return its sum
 
 #### SpamFilter::links($text, $countLimit = 2, $lengthLimit = 30, $weight = 1)
 
 Finds links in text and checks their count and length.
-Grades text according to set limits
-Returns grade (negative values are bad, positive are good)
+Links should be short (up to 30 chars) and two or less.
 
-* ``$text`` text to be checked
-* ``$countLimit`` number of allowed links in text, all subsequent links are graded negatively
-* ``$lengthLimit`` maximal link length, all links longer, are graded negatively
-* ``$weight`` grade weight
+  * `$text` - text to be checked
+  * `$countLimit` - number of allowed links in text, all subsequent links are graded negatively
+  * `$lengthLimit` - maximal link length, all links longer, are graded negatively
+  * `$weight` - grade weight
 
 
 #### SpamFilter::body($text, $limit = 60, $weight = 2)
 
-Checks text length
+Checks text length, longer is better.
 If length is greater than limit - is graded positively.
 Short text are graded negatively
-Returns grade (negative values are bad, positive are good)
 
-* ``$text`` text to be checked
-* ``$limit`` minimal text length to be graded positively
-* ``$weight`` grade weight
+  * `$text` - text to be checked
+  * `$limit` - minimal text length to be graded positively
+  * `$weight` - grade weight
 
 
 #### SpamFilter::prop($text, $weight = 10)
 
-Calculates the probability of being spam based on wordlist
+Calculates the probability of being _spam_ based on dictionary
 Only words with 3 or more chars are used
-Returns grade (negative values are bad, positive are good)
 
-* ``$text`` text to be checked
-* ``$weight`` grade weight
+  * `$text` - text to be checked
+  * `$weight` - grade weight
 
-
-#### SpamFilter::history($previousPostsCount, $weight = 1)
+#### SpamFilter::history($author, $weight = 1)
 
 Grades text authors history.
 Returns grade (negative values are bad, positive are good)
 
-* ``$previousPostsCount`` number of posts non spam posts minus number of spam posts
-* ``$weight`` grade weight
+  * `$author` - authors identifier
+  * `$weight` - grade weight
+
+#### SpamFilter::existing($text, $weight = 100)
+
+Checks if `$text` and how many times can be found in repository.
+
+  * `$existingPostsCount` - number of equal texts
+  * `$weight` - grade weight
 
 
-#### SpamFilter::existing($existingPostsCount, $weight = 100)
+#### SpamFilter::honeypot($honeypot, $weight = 100)
 
-Grades text according to previously posted texts
-Returns grade (negative values are bad, positive are good)
+Honeypot is a invisible field (hidden by CSS not by its type) that usually is filled by bots and left empty by humans.
 
-* ``$existingPostsCount`` number of equal texts
-* ``$weight`` grade weight
-
-
-#### SpamFilter::honeypot($emptyHoneypot, $weight = 100)
-
-Grades honeypot
-If honeypot is empty - grade is equal to 0, otherwise equals weight
-Returns grade (negative values are bad, positive are good)
-
-* ``$emptyHoneypot`` should be true if honeypot is empty
-* ``$weight`` grade weight
+  * `$honeypot` - honeypot content
+  * `$weight` - grade weight
 
 
-#### SpamFilter::referer($refererExists, $weight = 100)
+#### SpamFilter::referrer($referrer, $expected, $weight = 100)
 
-Grades referrer
-If referrer is missing or invalid - grade is equal to weight, otherwise equals 0
-Returns grade (negative values are bad, positive are good)
+Grades received referrer, should be same as expected
 
-* ``$refererExists`` should be true if referer is exists and is equal to expected
-* ``$weight`` grade weight
-
-
-#### SpamFilter::elapsed($elapsedSeconds, $limit = 5, $weight = 100)
-
-Grades time elapsed from rendering form to its submit
-If elapsed time is greater than limit - grade is equal to weight
-Otherwise equals weight * -1
-Returns grade (negative values are bad, positive are good)
-
-* ``$elapsedSeconds`` time elapsed from form render to submit
-* ``$limit`` minimal time needed to submit form
-* ``$weight`` grade weight
+  * `$referrer` - received referrer
+  * `$expected` - expected referrer
+  * `$weight` - grade weight
 
 
-### KnowledgeInterface
+#### SpamFilter::elapsed(\DateTime $datetime, $weight = 100)
 
-Knowledge interface is required for ``SpamFilter`` to access knowledge (spam propabilities for words) and users history
+Grades time from rendering form to its submission.
+Lazy submission is better.
 
-#### KnowledgeInterface::getWord($word);
-
-Retrieves word from knowledge repository.
-Returns array same as that passed to ``KnowledgeInterface::putWord``
-
-* ``$word`` string representing word
+  * `$datetime` - time when form was rendered
+  * `$weight` grade weight
 
 
-#### KnowledgeInterface::putWord($word);
-* Puts word into knowledge repository
+### DictionaryInterface
 
-* ``$word`` array containing tree fields with keys: ``word`` containing word, ``spam`` number of occurences in spam, ``ham`` number of occurences in ham
+#### DictionaryInterface::addWordsToCategory($category, array $words)
 
-
-#### KnowledgeInterface::getWords($words = array());
-
-Returns data from knowledge repository matching passed words
-
-* ``$words`` array containing words to retrieve from knowledge
+Adds words to dictionary
+If words already exist in dictionary, increases their number of occurrences
+If category is missing, creates it
 
 
-#### KnowledgeInterface::history($text);
+#### DictionaryInterface::addWordToCategory($category, $word)
 
-Checks authors history (based on authors email)
-Returns number of ham comments minus number spam comments
+Adds word to dictionary
+If word already exists in dictionary, increases its number of occurrences
+If category is missing, creates it
 
-* ``$text`` - array containing two fields: ``text`` with evaluated text and second containig user identifier (eg. login, e-mail)
+
+#### DictionaryInterface::getCategories($categories = array())
+
+Returns defined categories with their occurrences
+If `$categories` is specified, only those words will be returned
 
 
-#### KnowledgeInterface::exists($text);
+#### DictionaryInterface::getWordsFromCategory($category, $words = array())
 
-Checks if comment with same text exists
-Returns true if exists
+Returns array of `words`, where words are keys and their values correspond to number of occurrences in set `category`
+If `$words` is specified, only those words will be returned
 
-* ``$text`` - array containing two fields: ``text`` with evaluated text and second containig user identifier (eg. login, e-mail)
+
+#### DictionaryInterface::getWordFromCategory($category, $word)
+
+Should return number of occurrences of `$word` in `$category`.
+
+
+### HistoryInterface
+
+#### HistoryInterface::history($identifier)
+
+Returns number of _ham_ entries with subtracted _spam_ entries for authors `$identifier`
+
+#### HistoryInterface::exists($text)
+
+Returns number of same entries as `$text`
