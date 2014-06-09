@@ -1,6 +1,6 @@
 {
 	"name": "potfur/spamfilter",
-	"version": "v0.0.1",
+	"version": "v0.7.5",
 	"description": "Spamfilter",
 	"keywords": ["spamfilter"],
 	"type": "library",
